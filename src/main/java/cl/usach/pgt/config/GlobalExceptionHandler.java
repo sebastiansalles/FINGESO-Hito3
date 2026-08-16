@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import cl.usach.pgt.service.NoAutenticadoException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Map;
 
@@ -35,5 +36,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> noAutenticado(NoAutenticadoException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("mensaje", e.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> archivoDemasiadoGrande(MaxUploadSizeExceededException e) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("mensaje", "El archivo supera el máximo de 20 MB."));
     }
 }

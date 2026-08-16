@@ -86,7 +86,7 @@ public class EntregaService {
                     "La entrega de este hito ya fue evaluada y no puede reemplazarse.");
         }
 
-        String ruta = archivoService.guardar(archivo, tesis.getId(), hito.getId());
+        String ruta = archivoService.guardar(archivo, tesis, hito);
 
         entrega = almacenarEntrega(entrega, tesis, hito, archivo, ruta);  // OP-13
         notificacionService.enviarNotificacion(entrega);                  // OP-02

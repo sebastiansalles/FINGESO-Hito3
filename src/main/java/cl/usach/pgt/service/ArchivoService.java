@@ -1,5 +1,7 @@
 package cl.usach.pgt.service;
 
+import cl.usach.pgt.entity.HitoEntrega;
+import cl.usach.pgt.entity.Tesis;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,16 +11,22 @@ import java.nio.file.*;
 @Service
 public class ArchivoService {
 
-    private static final Path CARPETA = Paths.get("documentos-pgt");
+    private static final Path RAIZ = Paths.get("documentos-pgt");
 
-    /** Guarda el archivo y devuelve la ruta donde quedó. */
-    public String guardar(MultipartFile archivo, Long tesisId, Long hitoId) {
+    /**
+     * Guarda el documento en una carpeta por estudiante y devuelve su ruta.
+     * El nombre es determinista: reenviar el mismo hito reemplaza el archivo anterior.
+     */
+    public String guardar(MultipartFile archivo, Tesis tesis, HitoEntrega hito) {
         try {
-            Files.createDirectories(CARPETA);
+            Path carpeta = RAIZ.resolve(tesis.getEstudiante().getRut());
+            Files.createDirectories(carpeta);
 
-            String nombre = "tesis-" + tesisId + "_hito-" + hitoId
-                    + "." + extensionDe(archivo.getOriginalFilename());
-            Path destino = CARPETA.resolve(nombre);
+            String base = "hito-" + hito.getId();
+            borrarVersionesAnteriores(carpeta, base);
+
+            Path destino = carpeta.resolve(
+                    base + "." + extensionDe(archivo.getOriginalFilename()));
 
             Files.copy(archivo.getInputStream(), destino,
                     StandardCopyOption.REPLACE_EXISTING);
@@ -26,6 +34,15 @@ public class ArchivoService {
             return destino.toString();
         } catch (IOException e) {
             throw new RuntimeException("No fue posible guardar el archivo.", e);
+        }
+    }
+
+    /** Elimina entregas previas del mismo hito, cualquiera sea su extensión. */
+    private void borrarVersionesAnteriores(Path carpeta, String base) throws IOException {
+        try (DirectoryStream<Path> previos = Files.newDirectoryStream(carpeta, base + ".*")) {
+            for (Path anterior : previos) {
+                Files.delete(anterior);
+            }
         }
     }
 

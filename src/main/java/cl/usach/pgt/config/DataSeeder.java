@@ -4,9 +4,10 @@ import cl.usach.pgt.entity.*;
 import cl.usach.pgt.entity.enums.*;
 import cl.usach.pgt.repository.*;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-import java.time.LocalDateTime;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -32,38 +33,92 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (usuarioRepository.count() > 0) {
-            return;   // ya hay datos, no duplicar
+            return;
         }
 
-        Usuario profesor = usuarioRepository.save(new Usuario(
-                "11111111-1", "Gonzalo Gonzalez", "gonzalo.gonzalo@usach.cl",
+        // ---------- Profesores guía ----------
+        Usuario profesorHidalgo = usuarioRepository.save(new Usuario(
+                "11111111-1", "Felipe Hidalgo", "felipe.hidalgo@usach.cl",
                 RolUsuario.PROFESOR, passwordEncoder.encode("profesor123")));
 
-        Usuario estudiante = usuarioRepository.save(new Usuario(
-                "22222222-2", "Rodrigo Rodriguez", "rodrigo.rodriguez@usach.cl",
+        Usuario profesorGulppi = usuarioRepository.save(new Usuario(
+                "12121212-1", "Enzo Gulppi", "enzo.gulppi@usach.cl",
+                RolUsuario.PROFESOR, passwordEncoder.encode("profesor123")));
+
+        // ---------- Coordinación ----------
+        usuarioRepository.save(new Usuario(
+                "33333333-3", "Mario Nova", "mario.nova@usach.cl",
+                RolUsuario.COORDINADOR, passwordEncoder.encode("coordinador123")));
+
+        // ---------- Estudiantes ----------
+        Usuario tesistaSalles = usuarioRepository.save(new Usuario(
+                "22222222-2", "Sebastian Salles", "sebastian.salles@usach.cl",
                 RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
-        Tesis tesis = tesisRepository.save(new Tesis(
-                estudiante, profesor,
-                "Plataforma de Gestión de Tesistas"));
+        Usuario tesistaSilva = usuarioRepository.save(new Usuario(
+                "23232323-2", "Lucas Silva", "lucas.silva@usach.cl",
+                RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
-        // Hito vencido -> sirve para probar la Excepción 1
+        // Estudiante sin tesis oficializada: aún no ha pasado por el CU_007
+        usuarioRepository.save(new Usuario(
+                "24242424-2", "Ignacio Caro", "ignacio.caro@usach.cl",
+                RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
+
+        // ---------- Tesis oficializadas ----------
+        Tesis tesisSalles = tesisRepository.save(new Tesis(
+                tesistaSalles, profesorHidalgo,
+                "Monitoreo de calidad del aire mediante sensores IoT"));
+
+        tesisRepository.save(new Tesis(
+                tesistaSilva, profesorGulppi,
+                "Detección de fallas en redes eléctricas con aprendizaje automático"));
+
+        // ---------- Hitos de entrega ----------
+        // Los plazos cierran a las 23:59, como en un calendario académico.
+        // Las fechas son relativas a hoy para que los escenarios sigan
+        // siendo válidos cualquier día que se ejecute la aplicación.
+
+        // Plazo vencido -> Excepción 1
         hitoRepository.save(new HitoEntrega(
-                "Propuesta de Tema", LocalDateTime.now().minusDays(5)));
+                "Hito 1: Hallazgo del problema de investigación",
+                LocalDate.now().minusDays(7).atTime(23, 59)));
 
-        // Hito vigente con entrega ya evaluada -> Excepción 3
-        HitoEntrega marco = hitoRepository.save(new HitoEntrega(
-                "Marco Teórico", LocalDateTime.now().plusDays(15)));
-        Entrega evaluada = new Entrega(tesis, marco,
-                "marco-teorico.pdf", "documentos-pgt/ejemplo.pdf", 102400);
+        // Plazo vigente -> queda bloqueado solo para quien ya fue evaluado
+        HitoEntrega hito2 = hitoRepository.save(new HitoEntrega(
+                "Hito 2: Desarrollo del proyecto",
+                LocalDate.now().plusDays(10).atTime(23, 59)));
+
+        // Plazo vigente y sin entregas -> camino feliz y reenvío
+        hitoRepository.save(new HitoEntrega(
+                "Hito 3: Etapa final",
+                LocalDate.now().plusDays(25).atTime(23, 59)));
+
+        // ---------- Entrega ya evaluada (solo la tesis de Salles) ----------
+        Entrega evaluada = new Entrega(tesisSalles, hito2,
+                "hito2-desarrollo.pdf",
+                "documentos-pgt/" + tesistaSalles.getRut() + "/hito-" + hito2.getId() + ".pdf",
+                215040);
         evaluada.cambiarEstado(EstadoEntrega.EVALUADO);
         entregaRepository.save(evaluada);
 
-        // Hito vigente y vacío -> camino feliz
-        hitoRepository.save(new HitoEntrega(
-                "Informe de Avance", LocalDateTime.now().plusDays(30)));
+        imprimirCredenciales();
+    }
 
-        System.out.println(">>> Datos de prueba cargados. Estudiante id = " + estudiante.getId());
+    private void imprimirCredenciales() {
+        System.out.println("""
+
+            ===========================================================
+             DATOS DE PRUEBA CARGADOS
+            ===========================================================
+             RUT           CONTRASEÑA       PERFIL
+             -----------------------------------------------------
+             22222222-2    estudiante123    Tesista con entrega evaluada
+             23232323-2    estudiante123    Tesista sin entregas
+             24242424-2    estudiante123    Estudiante sin tesis activa
+             11111111-1    profesor123      Profesor guía (Salles)
+             12121212-1    profesor123      Profesor guía (Silva)
+             33333333-3    coordinador123   Coordinador de Tesis
+            ===========================================================
+            """);
     }
 }
-
