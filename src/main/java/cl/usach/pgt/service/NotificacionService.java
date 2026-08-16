@@ -14,9 +14,12 @@ public class NotificacionService {
     public void enviarNotificacion(Entrega entrega) {
         String destinatario = entrega.getTesis().getProfesorGuia().getCorreoInstitucional();
         String estudiante = entrega.getTesis().getEstudiante().getNombre();
+        String comentario = (entrega.getComentario() == null || entrega.getComentario().isBlank())
+                ? "(sin comentario)"
+                : entrega.getComentario();
 
-        log.info("[NOTIFICACIÓN] Para: {} | Asunto: Nueva entrega de {} | Hito: {} | Archivo: {}",
-                destinatario, estudiante,
-                entrega.getHito().getNombre(), entrega.getNombreArchivo());
+        log.info("[NOTIFICACIÓN] Para: {} | Nueva entrega de {} | Hito: {} | Archivo: {} | Comentario: {}",
+                destinatario, estudiante, entrega.getHito().getNombre(),
+                entrega.getNombreArchivo(), comentario);
     }
 }

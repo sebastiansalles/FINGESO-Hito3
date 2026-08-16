@@ -2,6 +2,7 @@ package cl.usach.pgt.controller;
 
 import cl.usach.pgt.dto.EntregaResponse;
 import cl.usach.pgt.dto.PanelHitoResponse;
+import cl.usach.pgt.dto.TesisResponse;
 import cl.usach.pgt.service.EntregaService;
 import cl.usach.pgt.service.NoAutenticadoException;
 import jakarta.servlet.http.HttpSession;
@@ -29,9 +30,16 @@ public class EntregaController {
     public EntregaResponse registrarEntrega(
             @RequestParam("hitoId") Long hitoId,
             @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam(value = "comentario", required = false) String comentario,
             HttpSession sesion) {
 
-        return entregaService.registrarEntrega(usuarioAutenticado(sesion), hitoId, archivo);
+        return entregaService.registrarEntrega(
+                usuarioAutenticado(sesion), hitoId, archivo, comentario);
+    }
+
+    @GetMapping("/tesis")
+    public TesisResponse verTesis(HttpSession sesion) {
+        return entregaService.verTesis(usuarioAutenticado(sesion));
     }
 
     /** OP-01 · La identidad viene de la sesión del servidor, no de la petición. */

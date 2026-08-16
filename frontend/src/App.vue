@@ -2,19 +2,26 @@
 import { ref, onMounted } from 'vue'
 
 const usuario = ref(null)
-const rut = ref('22222222-2')
+const rut = ref('20200001-1')
 const contrasena = ref('')
 const errorLogin = ref('')
 
+const tesis = ref(null)
 const hitos = ref([])
 const hitoSeleccionado = ref(null)
-const archivos = ref({})
+const archivo = ref(null)
+const comentario = ref('')
 const mensaje = ref('')
 const error = ref('')
 const enviando = ref(false)
 
 function esEstudiante() {
   return usuario.value && usuario.value.rol === 'ESTUDIANTE'
+}
+
+async function cargarDatosDelEstudiante() {
+  await cargarTesis()
+  await cargarPanel()
 }
 
 async function iniciarSesion() {
@@ -27,21 +34,31 @@ async function iniciarSesion() {
 
   if (respuesta.ok) {
     usuario.value = await respuesta.json()
-    if (esEstudiante()) await cargarPanel()
+    if (esEstudiante()) await cargarDatosDelEstudiante()
   } else {
     const cuerpo = await respuesta.json()
-    errorLogin.value = cuerpo.mensaje || 'Error al iniciar sesión'
+    errorLogin.value = cuerpo.mensaje || 'No se pudo iniciar sesión.'
   }
 }
 
 async function cerrarSesion() {
   await fetch('/api/sesion', { method: 'DELETE' })
   usuario.value = null
+  tesis.value = null
   hitos.value = []
   contrasena.value = ''
-  hitoSeleccionado.value = null
+  cerrarFormulario()
   mensaje.value = ''
   error.value = ''
+}
+
+async function cargarTesis() {
+  const respuesta = await fetch('/api/tesis')
+  if (respuesta.ok) {
+    tesis.value = await respuesta.json()
+  } else {
+    tesis.value = null
+  }
 }
 
 async function cargarPanel() {
@@ -51,38 +68,43 @@ async function cargarPanel() {
     hitos.value = await respuesta.json()
   } else {
     const cuerpo = await respuesta.json()
-    error.value = cuerpo.mensaje || 'No fue posible cargar los hitos.'
+    error.value = cuerpo.mensaje || 'No se pudieron cargar los hitos.'
   }
 }
 
-// Paso 1 del CU: el estudiante selecciona un hito
-function seleccionarHito(hitoId) {
-  hitoSeleccionado.value = hitoId
+// Paso 1 del CU_009: el estudiante selecciona un hito
+function seleccionarHito(hito) {
+  hitoSeleccionado.value = hito
+  archivo.value = null
+  comentario.value = ''
   mensaje.value = ''
   error.value = ''
 }
 
-function cancelar() {
+function cerrarFormulario() {
   hitoSeleccionado.value = null
+  archivo.value = null
+  comentario.value = ''
 }
 
-function seleccionarArchivo(hitoId, evento) {
-  archivos.value[hitoId] = evento.target.files[0]
+function elegirArchivo(evento) {
+  archivo.value = evento.target.files[0]
 }
 
-async function enviarEntrega(hitoId) {
+// Paso 5 del CU_009: adjunta el documento y envía
+async function enviarEntrega() {
   mensaje.value = ''
   error.value = ''
 
-  const archivo = archivos.value[hitoId]
-  if (!archivo) {
-    error.value = 'Debe seleccionar un archivo.'
+  if (!archivo.value) {
+    error.value = 'Debe adjuntar un archivo.'
     return
   }
 
   const datos = new FormData()
-  datos.append('hitoId', hitoId)
-  datos.append('archivo', archivo)
+  datos.append('hitoId', hitoSeleccionado.value.hitoId)
+  datos.append('archivo', archivo.value)
+  datos.append('comentario', comentario.value)
 
   enviando.value = true
   let respuesta
@@ -90,7 +112,7 @@ async function enviarEntrega(hitoId) {
     respuesta = await fetch('/api/entregas', { method: 'POST', body: datos })
   } catch (e) {
     enviando.value = false
-    error.value = 'No fue posible contactar al servidor. Verifique el tamaño del archivo.'
+    error.value = 'No se pudo completar el envío. Intente nuevamente.'
     return
   }
   enviando.value = false
@@ -99,11 +121,10 @@ async function enviarEntrega(hitoId) {
 
   if (respuesta.ok) {
     mensaje.value = 'Entrega registrada: ' + cuerpo.nombreArchivo
-    archivos.value[hitoId] = null
-    hitoSeleccionado.value = null
+    cerrarFormulario()
     await cargarPanel()
   } else {
-    error.value = cuerpo.mensaje || 'Error al enviar'
+    error.value = cuerpo.mensaje || 'No se pudo registrar la entrega.'
   }
 }
 
@@ -123,19 +144,21 @@ onMounted(async () => {
   const respuesta = await fetch('/api/sesion')
   if (respuesta.ok) {
     usuario.value = await respuesta.json()
-    if (esEstudiante()) await cargarPanel()
+    if (esEstudiante()) await cargarDatosDelEstudiante()
   }
 })
 </script>
 
 <template>
   <div class="contenedor">
-    <!-- Login -->
+
+    <!-- Inicio de sesión -->
     <div v-if="!usuario">
       <h2>Plataforma de Gestión de Tesistas</h2>
       <div>
         <input v-model="rut" placeholder="RUT">
-        <input v-model="contrasena" type="password" placeholder="Contraseña" @keyup.enter="iniciarSesion">
+        <input v-model="contrasena" type="password" placeholder="Contraseña"
+               @keyup.enter="iniciarSesion">
         <button @click="iniciarSesion">Ingresar</button>
       </div>
       <p v-if="errorLogin" style="color: red;">{{ errorLogin }}</p>
@@ -143,31 +166,67 @@ onMounted(async () => {
 
     <!-- Perfil sin funcionalidad en esta iteración -->
     <div v-else-if="!esEstudiante()">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="encabezado">
         <h2>{{ usuario.nombre }}</h2>
         <button @click="cerrarSesion">Cerrar sesión</button>
       </div>
-      <p>
-        Sesión iniciada con perfil <strong>{{ usuario.rol }}</strong>.
-      </p>
-      <p>
-        Esta iteración implementa el caso de uso CU_009 (Registrar Entrega Parcial),
-        correspondiente al perfil Estudiante. Las funcionalidades de este perfil están
-        diseñadas y no implementadas.
-      </p>
+      <p>Sesión iniciada con perfil <strong>{{ usuario.rol }}</strong>.</p>
+      <p>Esta iteración implementa el caso de uso CU_009 (Registrar Entrega Parcial),
+        correspondiente al perfil Estudiante.</p>
     </div>
 
     <!-- Panel del estudiante -->
     <div v-else>
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Entregas de {{ usuario.nombre }}</h2>
+      <div class="encabezado">
+        <div>
+          <h2>Mis Entregas — {{ usuario.nombre }}</h2>
+          <p v-if="tesis" class="tesis">
+            <strong>{{ tesis.titulo }}</strong><br>
+            Profesor guía: {{ tesis.profesorGuia }} · Estado: {{ tesis.estado }}
+          </p>
+        </div>
         <button @click="cerrarSesion">Cerrar sesión</button>
       </div>
 
       <p v-if="mensaje" style="color: green;">{{ mensaje }}</p>
       <p v-if="error" style="color: red;">{{ error }}</p>
 
-      <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; text-align: left;">
+      <!-- Paso 4: el sistema despliega el formulario de entrega -->
+      <div v-if="hitoSeleccionado" class="formulario">
+        <h3>Nueva entrega</h3>
+
+        <p>
+          <strong>Hito:</strong> {{ hitoSeleccionado.nombreHito }}<br>
+          <strong>Plazo:</strong> {{ formatear(hitoSeleccionado.fechaLimite) }}
+        </p>
+
+        <p>
+          <label>Documento (PDF o DOCX, máximo 20 MB)</label><br>
+          <input type="file" @change="elegirArchivo">
+        </p>
+
+        <p>
+          <label>Comentario para el profesor guía (opcional)</label><br>
+          <textarea v-model="comentario" rows="3" maxlength="500"
+                    placeholder="Ej: se incorporaron las correcciones del capítulo 2."></textarea>
+          <br><small>{{ comentario.length }} / 500</small>
+        </p>
+
+        <button :disabled="enviando" @click="enviarEntrega">
+          {{ enviando ? 'Enviando...' : 'Enviar entrega' }}
+        </button>
+        <button @click="cerrarFormulario">Cancelar</button>
+      </div>
+
+      <!-- Listado de hitos -->
+      <table border="1" cellpadding="8" cellspacing="0">
+        <colgroup>
+          <col style="width: 26%">
+          <col style="width: 18%">
+          <col style="width: 12%">
+          <col style="width: 30%">
+          <col style="width: 14%">
+        </colgroup>
         <thead style="background: #eee;">
         <tr>
           <th>Hito</th>
@@ -182,34 +241,31 @@ onMounted(async () => {
           <td>{{ hito.nombreHito }}</td>
           <td>
             {{ formatear(hito.fechaLimite) }}
-            <strong v-if="!hito.plazoVigente" style="color: red;"> (Vencido)</strong>
+            <strong v-if="!hito.plazoVigente && !hito.nombreArchivo" style="color: red;">
+              (Vencido)
+            </strong>
+            <span v-else-if="!hito.plazoVigente" style="color: #777;">
+                (Cerrado)
+              </span>
           </td>
           <td>{{ hito.estadoEntrega || 'Pendiente' }}</td>
-          <td>{{ hito.nombreArchivo || '—' }}</td>
           <td>
-            <template v-if="puedeEnviar(hito)">
-              <!-- Paso 1: seleccionar el hito -->
-              <button v-if="hitoSeleccionado !== hito.hitoId"
-                      @click="seleccionarHito(hito.hitoId)">
-                Seleccionar
-              </button>
-
-              <!-- Paso 4: el sistema despliega el formulario -->
-              <div v-else>
-                <input type="file" @change="seleccionarArchivo(hito.hitoId, $event)">
-                <button :disabled="enviando" @click="enviarEntrega(hito.hitoId)">
-                  {{ enviando ? 'Enviando...' : 'Enviar Entrega' }}
-                </button>
-                <button @click="cancelar">Cancelar</button>
-              </div>
-            </template>
+              <span v-if="hito.nombreArchivo">
+                {{ hito.nombreArchivo }}
+                <br><small>{{ formatear(hito.fechaHoraCarga) }}</small>
+                <br><small v-if="hito.comentario" class="comentario">"{{ hito.comentario }}"</small>
+              </span>
+            <span v-else>—</span>
+          </td>
+          <td>
+            <button v-if="puedeEnviar(hito)" @click="seleccionarHito(hito)">
+              {{ hito.nombreArchivo ? 'Reemplazar' : 'Entregar' }}
+            </button>
             <span v-else>No disponible</span>
           </td>
         </tr>
         </tbody>
       </table>
-
-      <p style="color: #666; font-size: 13px;">PDF o DOCX · máximo 20 MB</p>
     </div>
   </div>
 </template>
@@ -223,6 +279,51 @@ body {
 .contenedor {
   max-width: 900px;
   margin: 0 auto;
+}
+.encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.encabezado h2 {
+  margin-bottom: 0;
+}
+.tesis {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #555;
+}
+.formulario {
+  border: 1px solid #ccc;
+  background: #fafafa;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.formulario h3 {
+  margin-top: 0;
+}
+label {
+  font-size: 13px;
+  color: #444;
+}
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  font-family: inherit;
+}
+table {
+  width: 100%;
+  text-align: left;
+  table-layout: fixed;
+}
+td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.comentario {
+  color: #666;
+  font-style: italic;
 }
 input, button {
   margin-right: 5px;

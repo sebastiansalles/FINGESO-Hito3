@@ -9,6 +9,7 @@ public record PanelHitoResponse(
         boolean plazoVigente,
         String nombreArchivo,
         LocalDateTime fechaHoraCarga,
-        String estadoEntrega
+        String estadoEntrega,
+        String comentario
 ) {
 }

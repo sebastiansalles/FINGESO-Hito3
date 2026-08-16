@@ -46,24 +46,36 @@ public class Entrega {
     protected Entrega() {
     }
 
-    public Entrega(Tesis tesis, HitoEntrega hito,
-                   String nombreArchivo, String rutaArchivo, long tamanoBytes) {
+    @Column(length = 500)
+    private String comentario;
+
+    public Entrega(Tesis tesis, HitoEntrega hito, String nombreArchivo,
+                   String rutaArchivo, long tamanoBytes, String comentario) {
         this.tesis = tesis;
         this.hito = hito;
-        actualizarDocumento(nombreArchivo, rutaArchivo, tamanoBytes);
+        actualizarDocumento(nombreArchivo, rutaArchivo, tamanoBytes, comentario);
     }
 
     /** Decisión D1: el reenvío sobrescribe el documento anterior. */
-    public void actualizarDocumento(String nombreArchivo, String rutaArchivo, long tamanoBytes) {
+    public void actualizarDocumento(String nombreArchivo, String rutaArchivo,
+                                    long tamanoBytes, String comentario) {
         this.nombreArchivo = nombreArchivo;
         this.rutaArchivo = rutaArchivo;
         this.tamanoBytes = tamanoBytes;
+        this.comentario = comentario;
         this.fechaHoraCarga = LocalDateTime.now();
         this.estado = EstadoEntrega.ENVIADO_PARA_REVISION;
     }
 
     public void cambiarEstado(EstadoEntrega nuevo) {
         this.estado = nuevo;
+    }
+    /**
+     * Ajusta la fecha de carga. Se utiliza únicamente para poblar
+     * entregas históricas en los datos de prueba.
+     */
+    public void ajustarFechaCarga(LocalDateTime fecha) {
+        this.fechaHoraCarga = fecha;
     }
 
     public boolean estaEvaluada() {
@@ -102,6 +114,10 @@ public class Entrega {
 
     public EstadoEntrega getEstado() {
         return estado;
+    }
+
+    public String getComentario() {
+        return comentario;
     }
 }
 

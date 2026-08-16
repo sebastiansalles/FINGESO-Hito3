@@ -37,69 +37,84 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         // ---------- Profesores guía ----------
-        Usuario profesorHidalgo = usuarioRepository.save(new Usuario(
-                "11111111-1", "Felipe Hidalgo", "felipe.hidalgo@usach.cl",
+        // No se usan para iniciar sesión: existen porque toda Tesis requiere
+        // un profesor guía y porque son los destinatarios de las
+        // notificaciones automáticas (RF-09).
+        Usuario profesoraMendez = usuarioRepository.save(new Usuario(
+                "10100001-1", "Carolina Méndez", "carolina.mendez@universidad.cl",
                 RolUsuario.PROFESOR, passwordEncoder.encode("profesor123")));
 
-        Usuario profesorGulppi = usuarioRepository.save(new Usuario(
-                "12121212-1", "Enzo Gulppi", "enzo.gulppi@usach.cl",
+        Usuario profesorFuenzalida = usuarioRepository.save(new Usuario(
+                "10100002-2", "Rodrigo Fuenzalida", "rodrigo.fuenzalida@universidad.cl",
                 RolUsuario.PROFESOR, passwordEncoder.encode("profesor123")));
-
-        // ---------- Coordinación ----------
-        usuarioRepository.save(new Usuario(
-                "33333333-3", "Mario Nova", "mario.nova@usach.cl",
-                RolUsuario.COORDINADOR, passwordEncoder.encode("coordinador123")));
 
         // ---------- Estudiantes ----------
-        Usuario tesistaSalles = usuarioRepository.save(new Usuario(
-                "22222222-2", "Sebastian Salles", "sebastian.salles@usach.cl",
+        Usuario javiera = usuarioRepository.save(new Usuario(
+                "20200001-1", "Javiera Ruiz", "javiera.ruiz@universidad.cl",
                 RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
-        Usuario tesistaSilva = usuarioRepository.save(new Usuario(
-                "23232323-2", "Lucas Silva", "lucas.silva@usach.cl",
+        Usuario matias = usuarioRepository.save(new Usuario(
+                "20200002-2", "Matías Contreras", "matias.contreras@universidad.cl",
                 RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
-        // Estudiante sin tesis oficializada: aún no ha pasado por el CU_007
+        // Sin tesis oficializada: aún no ha pasado por el CU_007
         usuarioRepository.save(new Usuario(
-                "24242424-2", "Ignacio Caro", "ignacio.caro@usach.cl",
+                "20200003-3", "Antonia Vergara", "antonia.vergara@universidad.cl",
                 RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
         // ---------- Tesis oficializadas ----------
-        Tesis tesisSalles = tesisRepository.save(new Tesis(
-                tesistaSalles, profesorHidalgo,
+        Tesis tesisJaviera = tesisRepository.save(new Tesis(
+                javiera, profesoraMendez,
                 "Monitoreo de calidad del aire mediante sensores IoT"));
 
         tesisRepository.save(new Tesis(
-                tesistaSilva, profesorGulppi,
+                matias, profesorFuenzalida,
                 "Detección de fallas en redes eléctricas con aprendizaje automático"));
 
-        // ---------- Hitos de entrega ----------
-        // Los plazos cierran a las 23:59, como en un calendario académico.
-        // Las fechas son relativas a hoy para que los escenarios sigan
-        // siendo válidos cualquier día que se ejecute la aplicación.
+        // ---------- Calendario de hitos ----------
+        // Los plazos cierran a las 23:59 y son relativos a hoy, para que
+        // los escenarios sigan siendo válidos cualquier día que se ejecute.
 
-        // Plazo vencido -> Excepción 1
+        HitoEntrega hito1 = hitoRepository.save(new HitoEntrega(
+                "Hito 1: Definición del problema",
+                LocalDate.now().minusDays(45).atTime(23, 59)));
+
         hitoRepository.save(new HitoEntrega(
-                "Hito 1: Hallazgo del problema de investigación",
-                LocalDate.now().minusDays(7).atTime(23, 59)));
+                "Hito 2: Marco teórico",
+                LocalDate.now().minusDays(10).atTime(23, 59)));
 
-        // Plazo vigente -> queda bloqueado solo para quien ya fue evaluado
-        HitoEntrega hito2 = hitoRepository.save(new HitoEntrega(
-                "Hito 2: Desarrollo del proyecto",
-                LocalDate.now().plusDays(10).atTime(23, 59)));
+        HitoEntrega hito3 = hitoRepository.save(new HitoEntrega(
+                "Hito 3: Desarrollo del proyecto",
+                LocalDate.now().plusDays(15).atTime(23, 59)));
 
-        // Plazo vigente y sin entregas -> camino feliz y reenvío
         hitoRepository.save(new HitoEntrega(
-                "Hito 3: Etapa final",
-                LocalDate.now().plusDays(25).atTime(23, 59)));
+                "Hito 4: Informe final",
+                LocalDate.now().plusDays(40).atTime(23, 59)));
 
-        // ---------- Entrega ya evaluada (solo la tesis de Salles) ----------
-        Entrega evaluada = new Entrega(tesisSalles, hito2,
-                "hito2-desarrollo.pdf",
-                "documentos-pgt/" + tesistaSalles.getRut() + "/hito-" + hito2.getId() + ".pdf",
-                215040);
-        evaluada.cambiarEstado(EstadoEntrega.EVALUADO);
-        entregaRepository.save(evaluada);
+        // ---------- Historial de Javiera ----------
+        // Hito 1: entregado a tiempo y ya evaluado
+        Entrega entregaHito1 = new Entrega(tesisJaviera, hito1,
+                "hito1-definicion-problema.pdf",
+                "documentos-pgt/" + javiera.getRut() + "/hito-" + hito1.getId() + ".pdf",
+                189440,
+                "Se acotó el alcance según lo conversado en la primera reunión.");
+        entregaHito1.ajustarFechaCarga(LocalDate.now().minusDays(47).atTime(18, 20));
+        entregaHito1.cambiarEstado(EstadoEntrega.EVALUADO);
+        entregaRepository.save(entregaHito1);
+
+        // Hito 2: no entregó, el plazo ya venció
+
+        // Hito 3: entregado y evaluado, con el plazo todavía abierto
+        Entrega entregaHito3 = new Entrega(tesisJaviera, hito3,
+                "hito3-desarrollo.pdf",
+                "documentos-pgt/" + javiera.getRut() + "/hito-" + hito3.getId() + ".pdf",
+                215040,
+                "Se incorporaron las correcciones del capítulo de arquitectura.");
+        entregaHito3.ajustarFechaCarga(LocalDate.now().minusDays(3).atTime(21, 5));
+        entregaHito3.cambiarEstado(EstadoEntrega.EVALUADO);
+        entregaRepository.save(entregaHito3);
+
+        // Hito 4: sin entrega -> camino feliz de la demostración
 
         imprimirCredenciales();
     }
@@ -107,18 +122,18 @@ public class DataSeeder implements CommandLineRunner {
     private void imprimirCredenciales() {
         System.out.println("""
 
-            ===========================================================
+            =====================================================
              DATOS DE PRUEBA CARGADOS
-            ===========================================================
-             RUT           CONTRASEÑA       PERFIL
-             -----------------------------------------------------
-             22222222-2    estudiante123    Tesista con entrega evaluada
-             23232323-2    estudiante123    Tesista sin entregas
-             24242424-2    estudiante123    Estudiante sin tesis activa
-             11111111-1    profesor123      Profesor guía (Salles)
-             12121212-1    profesor123      Profesor guía (Silva)
-             33333333-3    coordinador123   Coordinador de Tesis
-            ===========================================================
+            =====================================================
+             RUT           CONTRASENA       ESTUDIANTE
+             ----------------------------------------------------
+             20200001-1    estudiante123    Javiera Ruiz
+                                            (con historial de entregas)
+             20200002-2    estudiante123    Matias Contreras
+                                            (sin entregas)
+             20200003-3    estudiante123    Antonia Vergara
+                                            (sin tesis asignada)
+            =====================================================
             """);
     }
 }
