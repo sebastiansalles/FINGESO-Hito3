@@ -6,6 +6,7 @@ import cl.usach.pgt.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -14,15 +15,18 @@ public class DataSeeder implements CommandLineRunner {
     private final TesisRepository tesisRepository;
     private final HitoEntregaRepository hitoRepository;
     private final EntregaRepository entregaRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(UsuarioRepository usuarioRepository,
                       TesisRepository tesisRepository,
                       HitoEntregaRepository hitoRepository,
-                      EntregaRepository entregaRepository) {
+                      EntregaRepository entregaRepository,
+                      PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.tesisRepository = tesisRepository;
         this.hitoRepository = hitoRepository;
         this.entregaRepository = entregaRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -32,12 +36,12 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         Usuario profesor = usuarioRepository.save(new Usuario(
-                "11111111-1", "Gonzalo Gonzalez",
-                "gonzalo.gonzales@usach.cl", RolUsuario.PROFESOR));
+                "11111111-1", "Gonzalo Gonzalez", "gonzalo.gonzalo@usach.cl",
+                RolUsuario.PROFESOR, passwordEncoder.encode("profesor123")));
 
         Usuario estudiante = usuarioRepository.save(new Usuario(
-                "22222222-2", "Rodrigo Rodriguez",
-                "rodrigo.rodriguez@usach.cl", RolUsuario.ESTUDIANTE));
+                "22222222-2", "Rodrigo Rodriguez", "rodrigo.rodriguez@usach.cl",
+                RolUsuario.ESTUDIANTE, passwordEncoder.encode("estudiante123")));
 
         Tesis tesis = tesisRepository.save(new Tesis(
                 estudiante, profesor,

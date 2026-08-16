@@ -11,6 +11,10 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
+    private String contrasena;
+
+
     @Column(nullable = false, unique = true, length = 12)
     private String rut;
 
@@ -27,11 +31,13 @@ public class Usuario {
     protected Usuario() {
     }
 
-    public Usuario(String rut, String nombre, String correoInstitucional, RolUsuario rol) {
+    public Usuario(String rut, String nombre, String correoInstitucional,
+                   RolUsuario rol, String contrasena) {
         this.rut = rut;
         this.nombre = nombre;
         this.correoInstitucional = correoInstitucional;
         this.rol = rol;
+        this.contrasena = contrasena;
     }
 
     public Long getId() { return id; }
@@ -39,4 +45,8 @@ public class Usuario {
     public String getNombre() { return nombre; }
     public String getCorreoInstitucional() { return correoInstitucional; }
     public RolUsuario getRol() { return rol; }
+
+    public String getContrasena() {
+        return contrasena;
+    }
 }

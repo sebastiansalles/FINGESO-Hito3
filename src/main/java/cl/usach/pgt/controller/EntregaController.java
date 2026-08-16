@@ -3,6 +3,8 @@ package cl.usach.pgt.controller;
 import cl.usach.pgt.dto.EntregaResponse;
 import cl.usach.pgt.dto.PanelHitoResponse;
 import cl.usach.pgt.service.EntregaService;
+import cl.usach.pgt.service.NoAutenticadoException;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,16 +21,25 @@ public class EntregaController {
     }
 
     @GetMapping("/panel")
-    public List<PanelHitoResponse> verPanel(@RequestHeader("X-Usuario-Id") Long usuarioId) {
-        return entregaService.verPanel(usuarioId);
+    public List<PanelHitoResponse> verPanel(HttpSession sesion) {
+        return entregaService.verPanel(usuarioAutenticado(sesion));
     }
 
     @PostMapping("/entregas")
     public EntregaResponse registrarEntrega(
-            @RequestHeader("X-Usuario-Id") Long usuarioId,
             @RequestParam("hitoId") Long hitoId,
-            @RequestParam("archivo") MultipartFile archivo) {
+            @RequestParam("archivo") MultipartFile archivo,
+            HttpSession sesion) {
 
-        return entregaService.registrarEntrega(usuarioId, hitoId, archivo);
+        return entregaService.registrarEntrega(usuarioAutenticado(sesion), hitoId, archivo);
+    }
+
+    /** OP-01 · La identidad viene de la sesión del servidor, no de la petición. */
+    private Long usuarioAutenticado(HttpSession sesion) {
+        Long id = (Long) sesion.getAttribute("usuarioId");
+        if (id == null) {
+            throw new NoAutenticadoException("Debe iniciar sesión para continuar.");
+        }
+        return id;
     }
 }

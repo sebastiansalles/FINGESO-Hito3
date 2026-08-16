@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import cl.usach.pgt.service.NoAutenticadoException;
 
 import java.util.Map;
 
@@ -28,5 +29,11 @@ public class GlobalExceptionHandler {
         e.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("mensaje", "Ocurrió un error inesperado."));
+    }
+
+    @ExceptionHandler(NoAutenticadoException.class)
+    public ResponseEntity<Map<String, String>> noAutenticado(NoAutenticadoException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("mensaje", e.getMessage()));
     }
 }
