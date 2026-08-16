@@ -41,5 +41,29 @@ public class Tesis {
         this.fechaInicio = LocalDate.now();
     }
 
-    // ↓ getters aquí (Alt+Insert)
+    // getters aquí
+
+    public Long getId() {
+        return id;
+    }
+
+    public Usuario getEstudiante() {
+        return estudiante;
+    }
+
+    public Usuario getProfesorGuia() {
+        return profesorGuia;
+    }
+
+    public String getTituloTema() {
+        return tituloTema;
+    }
+
+    public EstadoTesis getEstado() {
+        return estado;
+    }
+
+    public LocalDate getFechaInicio() {
+        return fechaInicio;
+    }
 }

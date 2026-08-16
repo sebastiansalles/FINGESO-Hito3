@@ -70,5 +70,38 @@ public class Entrega {
         return this.estado == EstadoEntrega.EVALUADO;
     }
 
-    // ↓ getters aquí (Alt+Insert)
+    // getters
+
+    public Long getId() {
+        return id;
+    }
+
+    public Tesis getTesis() {
+        return tesis;
+    }
+
+    public HitoEntrega getHito() {
+        return hito;
+    }
+
+    public LocalDateTime getFechaHoraCarga() {
+        return fechaHoraCarga;
+    }
+
+    public String getNombreArchivo() {
+        return nombreArchivo;
+    }
+
+    public String getRutaArchivo() {
+        return rutaArchivo;
+    }
+
+    public long getTamanoBytes() {
+        return tamanoBytes;
+    }
+
+    public EstadoEntrega getEstado() {
+        return estado;
+    }
 }
+

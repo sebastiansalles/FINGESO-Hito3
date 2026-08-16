@@ -30,5 +30,17 @@ public class HitoEntrega {
         return LocalDateTime.now().isBefore(fechaLimite);
     }
 
-    // ↓ getters aquí (Alt+Insert)
+    // getters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public LocalDateTime getFechaLimite() {
+        return fechaLimite;
+    }
 }
