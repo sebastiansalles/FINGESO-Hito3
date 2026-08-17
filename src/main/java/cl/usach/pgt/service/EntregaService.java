@@ -183,6 +183,6 @@ public class EntregaService {
         return tesisRepository
                 .findByEstudianteIdAndEstado(estudiante.getId(), EstadoTesis.ACTIVA)
                 .orElseThrow(() -> new ReglaNegocioException(
-                        "No tiene una tesis asignada. Comuníquese con la coordinación."));
+                        "Sin tesis asignada"));
     }
 }

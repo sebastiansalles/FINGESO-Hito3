@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+const TAMANO_MAXIMO_MB = 20
+
 const usuario = ref(null)
-const rut = ref('20200001-1')
+const rut = ref('12345678-3')
 const contrasena = ref('')
 const errorLogin = ref('')
 
@@ -91,6 +93,12 @@ function elegirArchivo(evento) {
   archivo.value = evento.target.files[0]
 }
 
+function etiquetaEstado(estado) {
+  if (estado === 'ENVIADO_PARA_REVISION') return 'En revisión'
+  if (estado === 'EVALUADO') return 'Evaluado'
+  return 'Pendiente'
+}
+
 // Paso 5 del CU_009: adjunta el documento y envía
 async function enviarEntrega() {
   mensaje.value = ''
@@ -98,6 +106,15 @@ async function enviarEntrega() {
 
   if (!archivo.value) {
     error.value = 'Debe adjuntar un archivo.'
+    return
+  }
+
+  // Se valida el peso antes de enviar: no tiene sentido transferir un
+  // archivo que el servidor va a rechazar. La validación definitiva
+  // sigue estando en OP-12, en la capa de servicio.
+  const pesoMb = archivo.value.size / (1024 * 1024)
+  if (pesoMb > TAMANO_MAXIMO_MB) {
+    error.value = `El archivo pesa ${pesoMb.toFixed(1)} MB. El máximo permitido es ${TAMANO_MAXIMO_MB} MB.`
     return
   }
 
@@ -202,13 +219,13 @@ onMounted(async () => {
 
         <p>
           <label>Documento (PDF o DOCX, máximo 20 MB)</label><br>
-          <input type="file" @change="elegirArchivo">
+          <input type="file" accept=".pdf,.docx" @change="elegirArchivo">
         </p>
 
         <p>
           <label>Comentario para el profesor guía (opcional)</label><br>
           <textarea v-model="comentario" rows="3" maxlength="500"
-                    placeholder="Ej: se incorporaron las correcciones del capítulo 2."></textarea>
+                    placeholder=" "></textarea>
           <br><small>{{ comentario.length }} / 500</small>
         </p>
 
@@ -248,7 +265,7 @@ onMounted(async () => {
                 (Cerrado)
               </span>
           </td>
-          <td>{{ hito.estadoEntrega || 'Pendiente' }}</td>
+          <td>{{ etiquetaEstado(hito.estadoEntrega) }}</td>
           <td>
               <span v-if="hito.nombreArchivo">
                 {{ hito.nombreArchivo }}
