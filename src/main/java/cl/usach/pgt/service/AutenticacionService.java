@@ -17,7 +17,7 @@ public class AutenticacionService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /** RF-01 · Inicio de sesión */
+    // rf01: iniciarSesion
     public Usuario iniciarSesion(String rut, String contrasena) {
         Usuario usuario = usuarioRepository.findByRut(rut)
                 .orElseThrow(() -> new ReglaNegocioException("RUT o contraseña incorrectos."));

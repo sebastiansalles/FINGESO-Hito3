@@ -10,9 +10,10 @@ const errorLogin = ref('')
 
 const tesis = ref(null)
 const hitos = ref([])
-const hitoSeleccionado = ref(null)
+const abierto = ref(null)         // id del hito desplegado, o null
 const archivo = ref(null)
 const comentario = ref('')
+const claveArchivo = ref(0)       // fuerza a limpiar el input tras enviar
 const mensaje = ref('')
 const error = ref('')
 const enviando = ref(false)
@@ -49,18 +50,14 @@ async function cerrarSesion() {
   tesis.value = null
   hitos.value = []
   contrasena.value = ''
-  cerrarFormulario()
+  abierto.value = null
   mensaje.value = ''
   error.value = ''
 }
 
 async function cargarTesis() {
   const respuesta = await fetch('/api/tesis')
-  if (respuesta.ok) {
-    tesis.value = await respuesta.json()
-  } else {
-    tesis.value = null
-  }
+  tesis.value = respuesta.ok ? await respuesta.json() : null
 }
 
 async function cargarPanel() {
@@ -74,33 +71,19 @@ async function cargarPanel() {
   }
 }
 
-// Paso 1 del CU_009: el estudiante selecciona un hito
-function seleccionarHito(hito) {
-  hitoSeleccionado.value = hito
+function alternar(hito) {
+  abierto.value = (abierto.value === hito.hitoId) ? null : hito.hitoId
   archivo.value = null
   comentario.value = ''
   mensaje.value = ''
   error.value = ''
 }
 
-function cerrarFormulario() {
-  hitoSeleccionado.value = null
-  archivo.value = null
-  comentario.value = ''
-}
-
 function elegirArchivo(evento) {
   archivo.value = evento.target.files[0]
 }
 
-function etiquetaEstado(estado) {
-  if (estado === 'ENVIADO_PARA_REVISION') return 'En revisión'
-  if (estado === 'EVALUADO') return 'Evaluado'
-  return 'Pendiente'
-}
-
-// Paso 5 del CU_009: adjunta el documento y envía
-async function enviarEntrega() {
+async function enviarEntrega(hito) {
   mensaje.value = ''
   error.value = ''
 
@@ -109,17 +92,14 @@ async function enviarEntrega() {
     return
   }
 
-  // Se valida el peso antes de enviar: no tiene sentido transferir un
-  // archivo que el servidor va a rechazar. La validación definitiva
-  // sigue estando en OP-12, en la capa de servicio.
   const pesoMb = archivo.value.size / (1024 * 1024)
   if (pesoMb > TAMANO_MAXIMO_MB) {
-    error.value = `El archivo pesa ${pesoMb.toFixed(1)} MB. El máximo permitido es ${TAMANO_MAXIMO_MB} MB.`
+    error.value = `El archivo pesa ${pesoMb.toFixed(1)} MB. El máximo es ${TAMANO_MAXIMO_MB} MB.`
     return
   }
 
   const datos = new FormData()
-  datos.append('hitoId', hitoSeleccionado.value.hitoId)
+  datos.append('hitoId', hito.hitoId)
   datos.append('archivo', archivo.value)
   datos.append('comentario', comentario.value)
 
@@ -138,7 +118,9 @@ async function enviarEntrega() {
 
   if (respuesta.ok) {
     mensaje.value = 'Entrega registrada: ' + cuerpo.nombreArchivo
-    cerrarFormulario()
+    archivo.value = null
+    comentario.value = ''
+    claveArchivo.value++
     await cargarPanel()
   } else {
     error.value = cuerpo.mensaje || 'No se pudo registrar la entrega.'
@@ -157,6 +139,12 @@ function puedeEnviar(hito) {
   return hito.plazoVigente && hito.estadoEntrega !== 'EVALUADO'
 }
 
+function etiqueta(hito) {
+  if (hito.estadoEntrega === 'EVALUADO') return 'Evaluado'
+  if (hito.estadoEntrega === 'ENVIADO_PARA_REVISION') return 'En revisión'
+  return hito.plazoVigente ? 'Pendiente' : 'No entregado'
+}
+
 onMounted(async () => {
   const respuesta = await fetch('/api/sesion')
   if (respuesta.ok) {
@@ -167,183 +155,113 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="contenedor">
+  <div style="max-width: 800px; margin: 0 auto;">
 
     <!-- Inicio de sesión -->
     <div v-if="!usuario">
       <h2>Plataforma de Gestión de Tesistas</h2>
       <div>
         <input v-model="rut" placeholder="RUT">
-        <input v-model="contrasena" type="password" placeholder="Contraseña"
-               @keyup.enter="iniciarSesion">
+        <input v-model="contrasena" type="password" placeholder="Contraseña" @keyup.enter="iniciarSesion">
         <button @click="iniciarSesion">Ingresar</button>
       </div>
       <p v-if="errorLogin" style="color: red;">{{ errorLogin }}</p>
     </div>
 
-    <!-- Perfil sin funcionalidad en esta iteración -->
+    <!-- Otro perfil -->
     <div v-else-if="!esEstudiante()">
-      <div class="encabezado">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>{{ usuario.nombre }}</h2>
         <button @click="cerrarSesion">Cerrar sesión</button>
       </div>
-      <p>Sesión iniciada con perfil <strong>{{ usuario.rol }}</strong>.</p>
-      <p>Esta iteración implementa el caso de uso CU_009 (Registrar Entrega Parcial),
-        correspondiente al perfil Estudiante.</p>
+      <p>Perfil activo: <strong>{{ usuario.rol }}</strong>.</p>
+      <p>Solo el perfil Estudiante tiene funcionalidades habilitadas en esta demo.</p>
     </div>
 
     <!-- Panel del estudiante -->
     <div v-else>
-      <div class="encabezado">
-        <div>
-          <h2>Mis Entregas — {{ usuario.nombre }}</h2>
-          <p v-if="tesis" class="tesis">
-            <strong>{{ tesis.titulo }}</strong><br>
-            Profesor guía: {{ tesis.profesorGuia }} · Estado: {{ tesis.estado }}
-          </p>
-        </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Mis Entregas — {{ usuario.nombre }}</h2>
         <button @click="cerrarSesion">Cerrar sesión</button>
       </div>
 
-      <p v-if="mensaje" style="color: green;">{{ mensaje }}</p>
-      <p v-if="error" style="color: red;">{{ error }}</p>
-
-      <!-- Paso 4: el sistema despliega el formulario de entrega -->
-      <div v-if="hitoSeleccionado" class="formulario">
-        <h3>Nueva entrega</h3>
-
-        <p>
-          <strong>Hito:</strong> {{ hitoSeleccionado.nombreHito }}<br>
-          <strong>Plazo:</strong> {{ formatear(hitoSeleccionado.fechaLimite) }}
-        </p>
-
-        <p>
-          <label>Documento (PDF o DOCX, máximo 20 MB)</label><br>
-          <input type="file" accept=".pdf,.docx" @change="elegirArchivo">
-        </p>
-
-        <p>
-          <label>Comentario para el profesor guía (opcional)</label><br>
-          <textarea v-model="comentario" rows="3" maxlength="500"
-                    placeholder=" "></textarea>
-          <br><small>{{ comentario.length }} / 500</small>
-        </p>
-
-        <button :disabled="enviando" @click="enviarEntrega">
-          {{ enviando ? 'Enviando...' : 'Enviar entrega' }}
-        </button>
-        <button @click="cerrarFormulario">Cancelar</button>
+      <div v-if="tesis" style="border-bottom: 2px solid #333; margin-bottom: 20px; padding-bottom: 10px;">
+        <strong>Tesis:</strong> {{ tesis.titulo }}<br>
+        <strong>Guía:</strong> {{ tesis.profesorGuia }} | <strong>Estado:</strong> {{ tesis.estado }}
       </div>
 
-      <!-- Listado de hitos -->
-      <table border="1" cellpadding="8" cellspacing="0">
-        <colgroup>
-          <col style="width: 26%">
-          <col style="width: 18%">
-          <col style="width: 12%">
-          <col style="width: 30%">
-          <col style="width: 14%">
-        </colgroup>
-        <thead style="background: #eee;">
-        <tr>
-          <th>Hito</th>
-          <th>Plazo</th>
-          <th>Estado</th>
-          <th>Documento</th>
-          <th>Acción</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="hito in hitos" :key="hito.hitoId">
-          <td>{{ hito.nombreHito }}</td>
-          <td>
-            {{ formatear(hito.fechaLimite) }}
-            <strong v-if="!hito.plazoVigente && !hito.nombreArchivo" style="color: red;">
-              (Vencido)
+      <p v-if="mensaje" style="color: green; font-weight: bold;">{{ mensaje }}</p>
+      <p v-if="error" style="color: red; font-weight: bold;">{{ error }}</p>
+
+      <!-- Acordeón de Hitos -->
+      <div>
+        <div v-for="hito in hitos" :key="hito.hitoId" style="border: 1px solid #333; margin-bottom: 10px;">
+
+          <!-- Cabecera -->
+          <div @click="alternar(hito)" style="cursor: pointer; background: #ddd; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <strong style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+              <span style="flex: none;">{{ abierto === hito.hitoId ? '[-]' : '[+]' }}</span>
+              <span>{{ hito.nombreHito }}</span>
             </strong>
-            <span v-else-if="!hito.plazoVigente" style="color: #777;">
-                (Cerrado)
-              </span>
-          </td>
-          <td>{{ etiquetaEstado(hito.estadoEntrega) }}</td>
-          <td>
-              <span v-if="hito.nombreArchivo">
-                {{ hito.nombreArchivo }}
-                <br><small>{{ formatear(hito.fechaHoraCarga) }}</small>
-                <br><small v-if="hito.comentario" class="comentario">"{{ hito.comentario }}"</small>
-              </span>
-            <span v-else>—</span>
-          </td>
-          <td>
-            <button v-if="puedeEnviar(hito)" @click="seleccionarHito(hito)">
-              {{ hito.nombreArchivo ? 'Reemplazar' : 'Entregar' }}
-            </button>
-            <span v-else>No disponible</span>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+            <span style="white-space: nowrap; flex: none;">(Estado: {{ etiqueta(hito) }})</span>
+          </div>
+
+          <!-- Detalle -->
+          <div v-if="abierto === hito.hitoId" style="padding: 15px;">
+
+            <p>
+              <strong>Plazo:</strong> {{ formatear(hito.fechaLimite) }}
+              <strong v-if="!hito.plazoVigente" style="color: red;">[Cerrado]</strong>
+            </p>
+
+            <div style="margin-bottom: 15px;">
+              <strong>Documento actual:</strong>
+              <div v-if="hito.nombreArchivo">
+                {{ hito.nombreArchivo }} (Subido el {{ formatear(hito.fechaHoraCarga) }})
+                <div v-if="hito.comentario" style="font-style: italic;">Comentario: "{{ hito.comentario }}"</div>
+              </div>
+              <div v-else>Sin entrega registrada.</div>
+            </div>
+
+            <!-- Formulario -->
+            <div v-if="puedeEnviar(hito)" style="border: 1px dashed #999; padding: 15px; background: #f9f9f9;">
+              <label>Subir archivo (PDF o DOCX, máx 20 MB):</label><br>
+              <input type="file" accept=".pdf,.docx" :key="claveArchivo" @change="elegirArchivo" style="display: block; max-width: 100%; margin-top: 5px;"><br>
+
+              <label>Comentario (opcional):</label><br>
+              <textarea v-model="comentario" rows="3" style="width: 100%; box-sizing: border-box;"></textarea><br>
+
+              <button :disabled="enviando" @click="enviarEntrega(hito)" style="margin-top: 10px; padding: 5px 15px;">
+                {{ enviando ? 'Enviando...' : (hito.nombreArchivo ? 'Reemplazar entrega' : 'Enviar entrega') }}
+              </button>
+            </div>
+
+            <div v-else style="background: #eee; padding: 10px; border: 1px solid #ccc;">
+              <span v-if="!hito.plazoVigente">El plazo de este hito ya venció y no permite subidas.</span>
+              <span v-else>La entrega ya fue evaluada.</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
     </div>
+
   </div>
 </template>
 
 <style>
+html {
+  overflow-y: scroll;
+}
 body {
   font-family: sans-serif;
   margin: 0;
   padding: 20px;
-}
-.contenedor {
-  max-width: 900px;
-  margin: 0 auto;
-}
-.encabezado {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-.encabezado h2 {
-  margin-bottom: 0;
-}
-.tesis {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #555;
-}
-.formulario {
-  border: 1px solid #ccc;
-  background: #fafafa;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-.formulario h3 {
-  margin-top: 0;
-}
-label {
-  font-size: 13px;
-  color: #444;
-}
-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px;
-  font-family: inherit;
-}
-table {
-  width: 100%;
-  text-align: left;
-  table-layout: fixed;
-}
-td {
-  vertical-align: top;
   overflow-wrap: anywhere;
-}
-.comentario {
-  color: #666;
-  font-style: italic;
 }
 input, button {
   margin-right: 5px;
   padding: 5px;
+  max-width: 100%;
 }
 </style>

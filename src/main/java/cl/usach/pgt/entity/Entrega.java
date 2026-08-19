@@ -32,7 +32,7 @@ public class Entrega {
     @Column(name = "nombre_archivo", nullable = false, length = 255)
     private String nombreArchivo;
 
-    /** Ruta en el repositorio de documentos. El archivo NO se guarda en la base. */
+    // Ruta en el repositorio de documentos. El archivo NO se guarda en la base
     @Column(name = "ruta_archivo", nullable = false, length = 500)
     private String rutaArchivo;
 
@@ -46,6 +46,7 @@ public class Entrega {
     protected Entrega() {
     }
 
+    //nuevo
     @Column(length = 500)
     private String comentario;
 
@@ -56,9 +57,8 @@ public class Entrega {
         actualizarDocumento(nombreArchivo, rutaArchivo, tamanoBytes, comentario);
     }
 
-    /** Decisión D1: el reenvío sobrescribe el documento anterior. */
-    public void actualizarDocumento(String nombreArchivo, String rutaArchivo,
-                                    long tamanoBytes, String comentario) {
+    //Decisión en hito 3- el reenvío sobrescribe el documento anterior
+    public void actualizarDocumento(String nombreArchivo, String rutaArchivo, long tamanoBytes, String comentario) {
         this.nombreArchivo = nombreArchivo;
         this.rutaArchivo = rutaArchivo;
         this.tamanoBytes = tamanoBytes;
@@ -70,10 +70,8 @@ public class Entrega {
     public void cambiarEstado(EstadoEntrega nuevo) {
         this.estado = nuevo;
     }
-    /**
-     * Ajusta la fecha de carga. Se utiliza únicamente para poblar
-     * entregas históricas en los datos de prueba.
-     */
+
+    //Ajusta fecha necesario para demostracion (poblado de datos)
     public void ajustarFechaCarga(LocalDateTime fecha) {
         this.fechaHoraCarga = fecha;
     }

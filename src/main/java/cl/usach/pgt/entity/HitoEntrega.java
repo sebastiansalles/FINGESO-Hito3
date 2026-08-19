@@ -25,7 +25,7 @@ public class HitoEntrega {
         this.fechaLimite = fechaLimite;
     }
 
-    /** OP-11 · verificarPlazoVigente() — RF-06 */
+    //OP-11 · verificarPlazoVigente()
     public boolean verificarPlazoVigente() {
         return LocalDateTime.now().isBefore(fechaLimite);
     }

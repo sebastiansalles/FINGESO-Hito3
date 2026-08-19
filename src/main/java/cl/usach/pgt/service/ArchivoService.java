@@ -13,10 +13,9 @@ public class ArchivoService {
 
     private static final Path RAIZ = Paths.get("documentos-pgt");
 
-    /**
-     * Guarda el documento en una carpeta por estudiante y devuelve su ruta.
-     * El nombre es determinista: reenviar el mismo hito reemplaza el archivo anterior.
-     */
+    //Guarda el documento en una carpeta por estudiante y devuelve su ruta.
+    //El nombre es determinista: reenviar el mismo hito reemplaza el archivo anterior.
+
     public String guardar(MultipartFile archivo, Tesis tesis, HitoEntrega hito) {
         try {
             Path carpeta = RAIZ.resolve(tesis.getEstudiante().getRut());
@@ -37,7 +36,7 @@ public class ArchivoService {
         }
     }
 
-    /** Elimina entregas previas del mismo hito, cualquiera sea su extensión. */
+    //Elimina entregas previas del mismo hito, cualquiera sea su extensión
     private void borrarVersionesAnteriores(Path carpeta, String base) throws IOException {
         try (DirectoryStream<Path> previos = Files.newDirectoryStream(carpeta, base + ".*")) {
             for (Path anterior : previos) {

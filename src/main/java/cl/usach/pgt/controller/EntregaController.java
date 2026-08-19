@@ -42,7 +42,7 @@ public class EntregaController {
         return entregaService.verTesis(usuarioAutenticado(sesion));
     }
 
-    /** OP-01 · La identidad viene de la sesión del servidor, no de la petición. */
+    // OP-01 - La identidad viene de la sesión del servidor
     private Long usuarioAutenticado(HttpSession sesion) {
         Long id = (Long) sesion.getAttribute("usuarioId");
         if (id == null) {

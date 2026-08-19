@@ -36,10 +36,10 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        // ---------- Profesores guía ----------
+        // Profesores guía
         // No se usan para iniciar sesión: existen porque toda Tesis requiere
         // un profesor guía y porque son los destinatarios de las
-        // notificaciones automáticas (RF-09).
+        // notificaciones automáticas
         Usuario profesorGonzalez = usuarioRepository.save(new Usuario(
                 "12345678-1", "Gonzalo Gonzalez", "gonzalo.gonzales@usach.cl",
                 RolUsuario.PROFESOR, passwordEncoder.encode("123")));
@@ -71,9 +71,8 @@ public class DataSeeder implements CommandLineRunner {
                 fernando, profesorRodriguez,
                 "Pérdida de bits debido a los rayos cósmicos"));
 
-        // ---------- Calendario de hitos ----------
-        // Los plazos cierran a las 23:59 y son relativos a hoy, para que
-        // los escenarios sigan siendo válidos cualquier día que se ejecute.
+        // Calendario de hitos ----------
+        // Los plazos cierran a las 23:59 y son relativos a hoy
 
         HitoEntrega hito1 = hitoRepository.save(new HitoEntrega(
                 "Hito 1: Definición del problema",
@@ -91,7 +90,7 @@ public class DataSeeder implements CommandLineRunner {
                 "Hito 4: Informe final",
                 LocalDate.now().plusDays(40).atTime(23, 59)));
 
-        // ---------- Historial de Martin ----------
+        // Historial de Martin
         // Hito 1: entregado a tiempo y ya evaluado
         Entrega entregaHito1 = new Entrega(tesisMartin, hito1,
                 "hito1-definicion-problema.pdf",

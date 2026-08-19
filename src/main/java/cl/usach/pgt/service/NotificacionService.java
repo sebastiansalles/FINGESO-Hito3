@@ -10,7 +10,7 @@ public class NotificacionService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificacionService.class);
 
-    /** OP-02 · enviarNotificacion() — RF-09 */
+    //OP-02 -- enviarNotificacion()
     public void enviarNotificacion(Entrega entrega) {
         String destinatario = entrega.getTesis().getProfesorGuia().getCorreoInstitucional();
         String estudiante = entrega.getTesis().getEstudiante().getNombre();

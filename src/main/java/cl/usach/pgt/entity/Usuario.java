@@ -31,8 +31,7 @@ public class Usuario {
     protected Usuario() {
     }
 
-    public Usuario(String rut, String nombre, String correoInstitucional,
-                   RolUsuario rol, String contrasena) {
+    public Usuario(String rut, String nombre, String correoInstitucional, RolUsuario rol, String contrasena) {
         this.rut = rut;
         this.nombre = nombre;
         this.correoInstitucional = correoInstitucional;
