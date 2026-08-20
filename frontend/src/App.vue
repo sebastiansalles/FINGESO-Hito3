@@ -80,7 +80,23 @@ function alternar(hito) {
 }
 
 function elegirArchivo(evento) {
-  archivo.value = evento.target.files[0]
+  error.value = ''
+  const seleccionado = evento.target.files[0]
+
+  if (!seleccionado) {
+    archivo.value = null
+    return
+  }
+
+  const pesoMb = seleccionado.size / (1024 * 1024)
+  if (pesoMb > TAMANO_MAXIMO_MB) {
+    error.value = `El archivo pesa ${pesoMb.toFixed(1)} MB. El máximo es ${TAMANO_MAXIMO_MB} MB.`
+    archivo.value = null
+    claveArchivo.value++
+    return
+  }
+
+  archivo.value = seleccionado
 }
 
 async function enviarEntrega(hito) {
@@ -145,6 +161,12 @@ function etiqueta(hito) {
   return hito.plazoVigente ? 'Pendiente' : 'No entregado'
 }
 
+function colorEstado(hito) {
+  if (hito.estadoEntrega === 'EVALUADO') return '#1a4fa0'
+  if (hito.estadoEntrega === 'ENVIADO_PARA_REVISION') return '#1c6b32'
+  return hito.plazoVigente ? '#666' : '#a32020'
+}
+
 onMounted(async () => {
   const respuesta = await fetch('/api/sesion')
   if (respuesta.ok) {
@@ -165,7 +187,7 @@ onMounted(async () => {
         <input v-model="contrasena" type="password" placeholder="Contraseña" @keyup.enter="iniciarSesion">
         <button @click="iniciarSesion">Ingresar</button>
       </div>
-      <p v-if="errorLogin" style="color: red;">{{ errorLogin }}</p>
+      <p v-if="errorLogin" style="color: #a32020;">{{ errorLogin }}</p>
     </div>
 
     <!-- Otro perfil -->
@@ -185,25 +207,34 @@ onMounted(async () => {
         <button @click="cerrarSesion">Cerrar sesión</button>
       </div>
 
-      <div v-if="tesis" style="border-bottom: 2px solid #333; margin-bottom: 20px; padding-bottom: 10px;">
+      <div v-if="tesis" style="border-bottom: 2px solid #0d6b5f; margin-bottom: 20px; padding-bottom: 10px;">
         <strong>Tesis:</strong> {{ tesis.titulo }}<br>
         <strong>Guía:</strong> {{ tesis.profesorGuia }} | <strong>Estado:</strong> {{ tesis.estado }}
       </div>
 
-      <p v-if="mensaje" style="color: green; font-weight: bold;">{{ mensaje }}</p>
-      <p v-if="error" style="color: red; font-weight: bold;">{{ error }}</p>
+      <p v-if="mensaje" style="color: #1c6b32; font-weight: bold;">{{ mensaje }}</p>
+      <p v-if="error" style="color: #a32020; font-weight: bold;">{{ error }}</p>
 
       <!-- Acordeón de Hitos -->
       <div>
-        <div v-for="hito in hitos" :key="hito.hitoId" style="border: 1px solid #333; margin-bottom: 10px;">
+        <div v-for="hito in hitos" :key="hito.hitoId" style="border: 1px solid #d5d8dc; margin-bottom: 10px;">
 
           <!-- Cabecera -->
-          <div @click="alternar(hito)" style="cursor: pointer; background: #ddd; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-            <strong style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-              <span style="flex: none;">{{ abierto === hito.hitoId ? '[-]' : '[+]' }}</span>
+          <div @click="alternar(hito)" style="cursor: pointer; background: #f0f2f4; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <strong style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+              <span :style="{
+                      flex: 'none',
+                      color: '#666',
+                      fontSize: '11px',
+                      display: 'inline-block',
+                      transition: 'transform .15s',
+                      transform: abierto === hito.hitoId ? 'rotate(90deg)' : 'none'
+                    }">▶</span>
               <span>{{ hito.nombreHito }}</span>
             </strong>
-            <span style="white-space: nowrap; flex: none;">(Estado: {{ etiqueta(hito) }})</span>
+            <span :style="{ color: colorEstado(hito), whiteSpace: 'nowrap', flex: 'none', fontWeight: '600' }">
+              {{ etiqueta(hito) }}
+            </span>
           </div>
 
           <!-- Detalle -->
@@ -211,7 +242,7 @@ onMounted(async () => {
 
             <p>
               <strong>Plazo:</strong> {{ formatear(hito.fechaLimite) }}
-              <strong v-if="!hito.plazoVigente" style="color: red;">[Cerrado]</strong>
+              <strong v-if="!hito.plazoVigente" style="color: #a32020;">[Cerrado]</strong>
             </p>
 
             <div style="margin-bottom: 15px;">
@@ -224,7 +255,7 @@ onMounted(async () => {
             </div>
 
             <!-- Formulario -->
-            <div v-if="puedeEnviar(hito)" style="border: 1px dashed #999; padding: 15px; background: #f9f9f9;">
+            <div v-if="puedeEnviar(hito)" style="border: 1px solid #d5d8dc; padding: 15px; background: #f9f9f9;">
               <label>Subir archivo (PDF o DOCX, máx 20 MB):</label><br>
               <input type="file" accept=".pdf,.docx" :key="claveArchivo" @change="elegirArchivo" style="display: block; max-width: 100%; margin-top: 5px;"><br>
 
@@ -236,7 +267,7 @@ onMounted(async () => {
               </button>
             </div>
 
-            <div v-else style="background: #eee; padding: 10px; border: 1px solid #ccc;">
+            <div v-else style="background: #f7f7f7; padding: 10px; border: 1px solid #e0e0e0;">
               <span v-if="!hito.plazoVigente">El plazo de este hito ya venció y no permite subidas.</span>
               <span v-else>La entrega ya fue evaluada.</span>
             </div>

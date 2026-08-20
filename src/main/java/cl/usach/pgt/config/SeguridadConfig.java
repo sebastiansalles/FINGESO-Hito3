@@ -12,4 +12,4 @@ public class SeguridadConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-}
+};
